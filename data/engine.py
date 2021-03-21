@@ -294,7 +294,6 @@ def load_animations(path):
     data = f.read()
     f.close()
     for animation in data.split('\n'):
-        print(animation)
         sections = animation.split(' ')
         anim_path = sections[0]
         entity_info = anim_path.split('/')

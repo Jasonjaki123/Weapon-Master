@@ -1,39 +1,27 @@
 import pygame,sys,random,time,os
 import data.engine as e
-#-----tons of variables
-#pygame initialization etc.
+import data.cursor as cursor
+import data.sword as sword
+from pygame.locals import *
+#-----tons of variables---------------------------------------------------------------------------------
+# pygame initialization etc.----------------------------------------------------------------------------
 pygame.init()
 clock = pygame.time.Clock()
 screen_size = (700,500)
 screen = pygame.display.set_mode(screen_size,0,32)
-display = pygame.Surface((250,183))
-#------ loading images, camera etc.
+pygame.display.set_caption('weapon master')
+display = pygame.Surface((263,188))
+e.set_global_colorkey((0,0,0))
+#------ loading images, camera etc.---------------------------------------------------------------------
 e.load_animations('data/images/entities/')
-player = e.entity(256,196,16,16,'player')
-# skurboll = e.entity(128,196,16,16,'skurboll')
+player = e.entity(256,128,16,16,'player')
 player.moving_left = False
 player.moving_right = False
 true_scroll = [0,0]
-scroll_strength = 20
-camera_x = 100
-camera_x_modify = 100
-camera_y = 90
-vertical_momentum_mode = 3
-powerup_object = e.entity(128,184,8,8,'powerup_object')
-
 game_map = e.load_map('data/images/tile_maps/map')
 player.vertical_momentum = 0
 player.air_timer = 0
-# ---- tile indeses etc.
-Gras_tile = {1: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_0.png'),
-             2: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_1.png'),
-             3: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_2.png'),
-             4: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_3.png'),
-             5: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_4.png'),
-             6: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_5.png'),
-             7: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_6.png'),
-             8: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_7.png'),
-             9: pygame.image.load('data/images/tile_maps/Gras_tiles/Gras_tiles_8.png')}
+last_time = time.time()
 blue_tile = {1: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_0.png'),
              2: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_1.png'),
              3: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_2.png'),
@@ -42,66 +30,63 @@ blue_tile = {1: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_0.
              6: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_5.png'),
              7: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_6.png'),
              8: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_7.png'),
-             9: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_8.png')}
-#----- sounds
+             9: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_8.png'),
+             10: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_9.png'), 
+             11: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_a.png'),
+             12: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_b.png'),
+             13: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_c.png'),
+             14: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_d.png'),
+             15: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_e.png'),
+             16: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_f.png')}
+#----- sounds-------------------------------------------------------------------------------------------
 jump_sound = pygame.mixer.Sound('data/sounds/jump_sound.wav')
 pygame.mixer.music.load('data/sounds/music.wav')
 pygame.mixer.music.play(-1)
-# ---- chunk generation
+# ---- chunk generation---------------------------------------------------------------------------------
 CHUNK_SIZE = 8
-
+particles = []
 def generate_chunk(x,y):
     chunk_data = []
     for y_pos in range(CHUNK_SIZE):
         for x_pos in range(CHUNK_SIZE):
             target_x = x * CHUNK_SIZE + x_pos
             target_y = y * CHUNK_SIZE + y_pos
-            tile_type = 0 # nothing
+            tile_type = 0 
             if target_y > 10:
-                tile_type = 5 # dirt
+                tile_type = 5 
             elif target_y == 10:
-                tile_type = 2 # grass
+                tile_type = 2 
             if tile_type != 0:
                 chunk_data.append([[target_x,target_y],tile_type])
     return chunk_data
 chunk_map = {}
-# --- mainloop
+#-----cursor--------------------------------------------------------------------------------------------
+mx, my = pygame.mouse.get_pos()
+cursor = cursor.cursor([my, my], 'data/images/cursor/default.png')
+pygame.mouse.set_visible(False)
+# --- mainloop------------------------------------------------------------------------------------------
+start_time = time.time()
+values = []
+#-----sword---------------------------------------------------------------------------------------------
+
 while True:
-    display.fill((52, 235, 155))
-    # ----- scrolling
-    true_scroll[0] += (player.x - true_scroll[0] - camera_x) / scroll_strength
-    true_scroll[1] += (player.y - true_scroll[1] - camera_y) / scroll_strength
+#-------scroll-------------------------------------------------------------
+    true_scroll[0] += (player.x - true_scroll[0] - 154)
+    true_scroll[1] += (player.y - true_scroll[1] - 98)
     scroll = true_scroll.copy()
     scroll[0] = int(scroll[0])
     scroll[1] = int(scroll[1])
-    #------- tile rendering
+
+    sword.pos = [player.x - scroll[0], player.y-scroll[1]]
+    sword.angle = sword.get_angle(cursor.pos)
+    end_time = time.time() - start_time
+    display.fill((52, 235, 155))
+        #-------mouse handling stuff------------------------------------------------------------------------
+    mx, my = pygame.mouse.get_pos()
+    game_mx = int(mx/3)
+    game_my = int(my/3)
+    #------- tile rendering ----------------------------------------------------------------------------
     tile_rects = []
-    y = 0
-    for layer in game_map:
-        x = 0
-        for tile in layer:
-            if tile =='1':
-                display.blit(blue_tile[1], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='2':
-                display.blit(blue_tile[2], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='3':
-                display.blit(blue_tile[3], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='4':
-                display.blit(blue_tile[4], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='5':
-                display.blit(blue_tile[5], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='6':
-                display.blit(blue_tile[6], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='7':
-                display.blit(blue_tile[7], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='8':
-                display.blit(blue_tile[8], (x*16-scroll[0],y*16-scroll[1]))
-            if tile =='9':
-                display.blit(blue_tile[9], (x*16-scroll[0],y*16-scroll[1]))
-            if tile != '0':
-                tile_rects.append(pygame.Rect(x*16,y*16,16,16))
-            x += 1
-        y += 1
     for y in range(3):
         for x in range(4):
             target_x = x - 1 + int(round(scroll[0]/(CHUNK_SIZE*16)))
@@ -113,18 +98,16 @@ while True:
                 display.blit(blue_tile[tile[1]],(tile[0][0]*16-scroll[0],tile[0][1]*16-scroll[1]+64))
                 if tile[1] in [1,2]:
                     tile_rects.append(pygame.Rect(tile[0][0]*16,tile[0][1]*16+64,16,16))
-    #------- movement stuff
+    #------- movement stuff-----------------------------------------------------------------------------
     player_movement = [0,0]
     if player.moving_right == True:
-        player_movement[0] += 2
-        player.x += 2
+        player_movement[0] += 4
     if player.moving_left == True:
-        player_movement[0] -= 2
-        player.x -= 2
+        player_movement[0] -= 4
     player_movement[1] += player.vertical_momentum
     player.vertical_momentum += 0.5
-    if player.vertical_momentum > vertical_momentum_mode:
-        player.vertical_momentum = vertical_momentum_mode
+    if player.vertical_momentum > 4:
+        player.vertical_momentum = 4
 
     if player_movement[0] == 0:
         player.set_action('idle')
@@ -134,12 +117,8 @@ while True:
     if player_movement[0] < 0:
         player.set_flip(True)
         player.set_action('run')
-
+    # ----- colisions-----------------------------------------------------------------------------------
     collision_types = player.move(player_movement, tile_rects)
-    if player.obj.rect.colliderect(powerup_object.obj.rect):
-    	player.vertical_momentum = -10
-    	vertical_momentum_mode = 0.2
-    	jump_sound.play()
 
     if collision_types['bottom'] == True:
         player.air_timer = 0
@@ -147,40 +126,34 @@ while True:
         vertical_momentum_mode = 3
     else:
         player.air_timer += 1
-    #----- pygame events
+    #----- pygame events--------------------------------------------------------------------------------
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
+        if event.type == KEYDOWN:
+            if event.key == K_LEFT:
                 player.moving_left = True
-            if event.key == pygame.K_RIGHT:
+            if event.key == K_RIGHT:
                 player.moving_right = True
-            if event.key == pygame.K_UP:
+            if event.key == K_UP:
                 if player.air_timer < 12:
                     player.vertical_momentum = -10
                     jump_sound.play()
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT:
+        if event.type == KEYUP:
+            if event.key == K_LEFT:
                 player.moving_left = False
-            if event.key == pygame.K_RIGHT:
+            if event.key == K_RIGHT:
                 player.moving_right = False
-    #----display rendering stuff
-    if player.y == 224 or player.y == 224.5:
-        camera_y = 150
-    else:
-        camera_y = 90 
-    if player.x < camera_x_modify:
-    	camera_x = 0
-    	scroll_strength = 8
-    else:
-    	camera_x = camera_x_modify
-    	scroll_strength = 20
+
+    #----display rendering stuff------------------------------------------------------------------------
+
     player.display(display,scroll)
-    powerup_object.display(display,scroll)
-    powerup_object.change_frame(1)
     player.change_frame(1)
+    cursor.render(display, [mx, my])
+    sword.render(display)
+    sword.get_angle(cursor.pos)
+    sword.rotate()
     screen.blit(pygame.transform.scale(display,screen_size),(0,0))
     clock.tick(60)  
     pygame.display.update()

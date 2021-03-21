@@ -2,6 +2,3 @@ player/idle/ 12;12;12;12;12 loop
 player/run/ 12;12;12;12 loop
 player/jump_up/ 10;10;10 loop
 player/jump_down/ 30;30;30 loop
-powerup_object/idle/ 10;10;10 loop
-ninja_enemy/idle/ 1 loop
-ninja_enemy/run/ 12;12;12 loop
