@@ -1,4 +1,4 @@
-import pygame,sys,random,time,os
+import pygame,sys,random,time,os,math
 import data.engine as e
 import data.cursor as cursor
 import data.sword as sword
@@ -42,6 +42,7 @@ blue_tile = {1: pygame.image.load('data/images/tile_maps/blue_tiles/blue_tile_0.
 jump_sound = pygame.mixer.Sound('data/sounds/jump_sound.wav')
 pygame.mixer.music.load('data/sounds/music.wav')
 pygame.mixer.music.play(-1)
+errors = 0
 # ---- chunk generation---------------------------------------------------------------------------------
 CHUNK_SIZE = 8
 particles = []
@@ -67,8 +68,27 @@ pygame.mouse.set_visible(False)
 # --- mainloop------------------------------------------------------------------------------------------
 start_time = time.time()
 values = []
-#-----sword---------------------------------------------------------------------------------------------
+#-----angle stuff---------------------------------------------------------------------------------------
+def meassure_angle(dis_x, dis_y):
+    try:
+        angle = math.atan(dis_x / dis_y)
+        if dis_x < 0:
+            dis_x += math.pi
+        angle = math.degrees(angle)
+        return angle
+    except ZeroDivisionError:
+        angle = 10
 
+#-----sword---------------------------------------------------------------------------------------------
+sword_img = pygame.image.load('data/images/sword/sword.png')
+class Sword():
+    def __init__(self, pos,img):
+        self.pos = pos
+        self.img = img
+        self.img.set_colorkey((0,0,0))
+        self.width, self.height = self.img.get_width(), self.img.get_height()
+        self.angle = 0
+sword = Sword([player.x, player.y], sword_img)
 while True:
 #-------scroll-------------------------------------------------------------
     true_scroll[0] += (player.x - true_scroll[0] - 154)
@@ -76,9 +96,6 @@ while True:
     scroll = true_scroll.copy()
     scroll[0] = int(scroll[0])
     scroll[1] = int(scroll[1])
-
-    sword.pos = [player.x - scroll[0], player.y-scroll[1]]
-    sword.angle = sword.get_angle(cursor.pos)
     end_time = time.time() - start_time
     display.fill((52, 235, 155))
         #-------mouse handling stuff------------------------------------------------------------------------
@@ -126,7 +143,11 @@ while True:
         vertical_momentum_mode = 3
     else:
         player.air_timer += 1
-    #----- pygame events--------------------------------------------------------------------------------
+    
+    #------sword handling-------------------------------------------------------------------------------
+    sword.pos[0] = player.x - scroll[0]
+    sword.pos[1] = player.y - scroll[1]
+    #----- pygame events--------------------------------------------------------------------------------    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
@@ -151,9 +172,11 @@ while True:
     player.display(display,scroll)
     player.change_frame(1)
     cursor.render(display, [mx, my])
-    sword.render(display)
-    sword.get_angle(cursor.pos)
-    sword.rotate()
+    try:
+        display.blit(pygame.transform.rotate(sword.img, meassure_angle(sword.pos[0]-mx, sword.pos[1]-my)), (sword.pos[0], sword.pos[1]))
+    except TypeError:
+        print(errors)
+        errors += 1
     screen.blit(pygame.transform.scale(display,screen_size),(0,0))
     clock.tick(60)  
     pygame.display.update()
